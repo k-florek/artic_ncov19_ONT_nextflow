@@ -8,15 +8,14 @@
 //starting parameters
 params.fast5_dir = ""
 params.run_prefix = "artic_ncov19"
-params.maxcpus = 8
+params.outdir = "artic_ncov19_results"
 
 
 Channel
     .fromPath( "${params.fast5_dir}/**.fast5")
     .ifEmpty { exit 1, "Cannot find any fast5 files in: ${params.reads} Path must not end with /" }
-    .set { raw_fast5 }
+    .into { raw_fast5;polish_fast5 }
 
-// Basecalling with Guppy
 process guppy_basecalling {
   input:
     file(fast5s) from raw_fast5.collect()
@@ -37,20 +36,79 @@ process guppy_basecalling {
   }
 }
 
-// Demultiplexing and polishing with nanopolish
 process artic_gather {
   input:
     file(reads) from fastq_reads.collect()
-    file(summary) from seq_sum
 
+  output:
+    file("${params.run_prefix}_fastq_pass.fastq") into fastq_polishing, fastq_demultiplexing
+    file("${params.run_prefix}_sequencing_summary.txt") into summary
+
+  script:
   """
-  artic gather --min-length 400 --max-length 700 --prefix ${params.run_name} --directory ./
-  artic demultiplex --threads ${params.maxcpus} ${params.run_name}.fastq
-  nanopolish index -s ${params.run_name}*sequencing_summary.txt -d ./ ${params.run_name}.fastq
+  artic gather \
+  --min-length ${params.min_length} \
+  --max-length  ${params.max_length} \
+  --prefix ${params.run_prefix} \
+  --directory ./
   """
 }
-/*
-process artic_demultiplex
 
+process artic_demultiplex {
+  input:
+    file(fastq_reads) from fastq_demultiplexing
+
+  output:
+    file("${params.run_prefix}_pass_*.fastq") into demultiplexed_reads
+
+  script:
+  """
+  artic demultiplex \
+  --threads ${params.threadsmultiplexjob} \
+  ${fastq_demultiplexing}
+  """
 }
-*/
+
+process artic_nanopolish {
+  input:
+    file(fastq_passing) from fastq_polishing
+    file(seq_summary) from summary
+    path fast5s, stageAs:'fast5/*' from polish_fast5.collect()
+
+  output:
+    file "*.index*" into nanopolish_indexs
+    file "${params.run_prefix}_pass.fastq" into nano_passed_reads
+
+  script:
+  """
+  nanopolish index \
+  -s ${seq_summary} \
+  -d fast5/
+  ${fastq_passing}
+  """
+}
+
+process artic_pipeline {
+  publishDir "${params.outdir}", mode: "copy"
+  
+  input:
+    file(nano_index) from nanopolish_indexs.collect()
+    file(read_file) from demultiplexed_reads
+    file(nano_reads) from nano_passed_reads
+
+  output:
+    file "*{.primertrimmed.bam,.vcf,.variants.tab,.consensus.fasta}" into output
+
+  script:
+  """
+  filename=${read_file} && tmp=\${filename#*pass_} && samplename=\${tmp%.*}
+  artic minion \
+  --normalise ${params.normalise} \
+  --threads ${params.threadspipejob} \
+  --scheme-directory /artic-ncov2019/primer_schemes \
+  --read-file ${read_file} \
+  --nanopolish-read-file ${nano_reads} \
+  nCoV-2019 \
+  \$samplename
+  """
+}
