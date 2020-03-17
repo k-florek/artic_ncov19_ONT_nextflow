@@ -26,7 +26,8 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh &
 # set the environment
 ENV PATH="/miniconda/bin:$PATH"
 
-# create the conda environment
+# create the conda environment and set as default
 RUN conda env create -f /artic-ncov2019/environment.yml
-RUN conda init
+RUN echo "source activate artic-ncov2019" > /etc/bash.bashrc
+ENV PATH /miniconda/envs/artic-ncov2019/bin:$PATH
 WORKDIR /data
