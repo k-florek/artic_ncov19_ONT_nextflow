@@ -45,7 +45,9 @@ process demultiplexing {
     file(summary) from seq_sum
 
   """
+  #!/bin/bash
   d=`date --iso-8601`
+  conda init bash
   conda activate artic-ncov2019
   artic gather --min-length 400 --max-length 700 --prefix ${params.run_name}_\$d --directory ./
   artic demultiplex --threads ${params.maxcpus} ${params.run_name}_\$d.fastq
