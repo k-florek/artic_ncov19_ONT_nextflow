@@ -41,7 +41,7 @@ process basecalling {
 // Demultiplexing and polishing with nanopolish
 process demultiplexing {
   input:
-    file from fastq_reads.collect()
+    file(reads) from fastq_reads.collect()
     file(summary) from seq_sum
 
   """
