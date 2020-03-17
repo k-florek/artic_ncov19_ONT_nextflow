@@ -46,11 +46,9 @@ process demultiplexing {
 
   """
   d=`date --iso-8601`
-  conda init bash
-  bash -c "conda activate artic-ncov2019 &&\
-  artic gather --min-length 400 --max-length 700 --prefix ${params.run_name}_\$d --directory ./ &&\
-  artic demultiplex --threads ${params.maxcpus} ${params.run_name}_\$d.fastq" &&\
-  nanopolish index -s ${params.run_name}_\$d*sequencing_summary.txt -d ./ ${params.run_name}_\$d.fastq "
+  artic gather --min-length 400 --max-length 700 --prefix ${params.run_name}_\$d --directory ./
+  artic demultiplex --threads ${params.maxcpus} ${params.run_name}_\$d.fastq"
+  nanopolish index -s ${params.run_name}_\$d*sequencing_summary.txt -d ./ ${params.run_name}_\$d.fastq
   """
 }
 
