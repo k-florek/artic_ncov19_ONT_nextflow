@@ -22,7 +22,6 @@ process guppy_basecalling {
 
   output:
     file "fastq/*.fastq" into fastq_reads
-    file "fastq/sequencing_summary.txt" into seq_sum
 
   script:
   if(params.basecalling_mode == "fast"){
@@ -90,7 +89,7 @@ process artic_nanopolish {
 
 process artic_pipeline {
   publishDir "${params.outdir}", mode: "copy"
-  
+
   input:
     file(nano_index) from nanopolish_indexs.collect()
     file(read_file) from demultiplexed_reads
