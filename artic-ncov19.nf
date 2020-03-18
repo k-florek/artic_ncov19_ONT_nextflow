@@ -53,8 +53,6 @@ process artic_gather {
     """
 }
 
-/*
-
 process artic_demultiplex {
   input:
     file(fastq_reads) from fastq_demultiplexing
@@ -113,4 +111,3 @@ process artic_pipeline {
   \$samplename
   """
 }
-*/
