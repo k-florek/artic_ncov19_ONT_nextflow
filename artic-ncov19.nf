@@ -14,7 +14,7 @@ params.outdir = "artic_ncov19_results"
 Channel
     .fromPath( "${params.fast5_dir}/**.fast5")
     .ifEmpty { exit 1, "Cannot find any fast5 files in: ${params.reads} Path must not end with /" }
-    .into { raw_fast5;polish_fast5 }
+    .into { raw_fast5; polish_fast5 }
 
 process guppy_basecalling {
   input:
