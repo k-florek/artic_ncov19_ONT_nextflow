@@ -13,8 +13,8 @@ params.outdir = "artic_ncov19_results"
 
 Channel
     .fromPath( "${params.fast5_dir}/**.fast5")
-    .ifEmpty { exit 1, "Cannot find any fast5 files in: ${params.reads} Path must not end with /" }
-    .set { raw_fast5 }
+    .ifEmpty { exit 1, "Cannot find any fast5 files in: ${params.fast5_dir} Path must not end with /" }
+    .into { raw_fast5; polish_fast5 }
 
 process guppy_basecalling {
   input:
@@ -22,18 +22,17 @@ process guppy_basecalling {
 
   output:
     file "fastq/*.fastq" into fastq_reads
-    file "*.fast5" into polish_fast5
 
   script:
-  if(params.basecalling_mode == "fast"){
-    """
-    guppy_basecaller -c /opt/ont/guppy/data/dna_r9.4.1_450bps_fast.cfg -i ./ -s fastq -x auto -r
-    """
-  }else{
-    """
-    guppy_basecaller -c /opt/ont/guppy/data/dna_r9.4.1_450bps_hac.cfg -i ./ -s fastq -x auto -r
-    """
-  }
+    if(params.basecalling_mode == "fast"){
+      """
+      guppy_basecaller -c /opt/ont/guppy/data/dna_r9.4.1_450bps_fast.cfg -i ./ -s fastq -x auto -r
+      """
+    }else{
+      """
+      guppy_basecaller -c /opt/ont/guppy/data/dna_r9.4.1_450bps_hac.cfg -i ./ -s fastq -x auto -r
+      """
+    }
 }
 
 process artic_gather {
@@ -41,18 +40,20 @@ process artic_gather {
     file(reads) from fastq_reads.collect()
 
   output:
-    file("${params.run_prefix}_fastq_pass.fastq") into fastq_polishing, fastq_demultiplexing
+    file("${params.run_prefix}_fastq_pass.fastq") into (fastq_polishing, fastq_demultiplexing)
     file("${params.run_prefix}_sequencing_summary.txt") into summary
 
   script:
-  """
-  artic gather \
-  --min-length ${params.min_length} \
-  --max-length  ${params.max_length} \
-  --prefix ${params.run_prefix} \
-  --directory ./
-  """
+    """
+    artic gather \
+    --min-length ${params.min_length} \
+    --max-length  ${params.max_length} \
+    --prefix ${params.run_prefix} \
+    --directory ./
+    """
 }
+
+/*
 
 process artic_demultiplex {
   input:
@@ -112,3 +113,4 @@ process artic_pipeline {
   \$samplename
   """
 }
+*/
