@@ -26,11 +26,11 @@ process guppy_basecalling {
   script:
     if(params.basecalling_mode == "fast"){
       """
-      guppy_basecaller -c /opt/ont/guppy/data/dna_r9.4.1_450bps_fast.cfg -i ./ -s fastq -x auto -r
+      guppy_basecaller -c /opt/ont/guppy/data/dna_r9.4.1_450bps_fast.cfg -i . -s fastq -x auto -r
       """
     }else{
       """
-      guppy_basecaller -c /opt/ont/guppy/data/dna_r9.4.1_450bps_hac.cfg -i ./ -s fastq -x auto -r
+      guppy_basecaller -c /opt/ont/guppy/data/dna_r9.4.1_450bps_hac.cfg -i . -s fastq -x auto -r
       """
     }
 }
@@ -49,7 +49,7 @@ process artic_gather {
     --min-length ${params.min_length} \
     --max-length  ${params.max_length} \
     --prefix ${params.run_prefix} \
-    --directory ./
+    --directory .
     """
 }
 
