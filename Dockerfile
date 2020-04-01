@@ -4,7 +4,7 @@ FROM ubuntu:xenial
 LABEL base.image="ubuntu:xenial"
 LABEL container.version="1"
 LABEL software="ARTIC-nCov19"
-LABEL software.version="1.0"
+LABEL software.version="1.1.0"
 LABEL description="Conda environment for ARTIC network nCov19 bioinformatic SOP"
 LABEL website="https://artic.network/ncov-2019/ncov2019-bioinformatics-sop.html"
 LABEL license=""
