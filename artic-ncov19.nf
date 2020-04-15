@@ -6,9 +6,9 @@
 //Email: kelsey.florek@slh.wisc.edu
 
 //starting parameters
-params.primers = "V1"
-params.fast5_dir = "./fast5"
-params.fastq_dir = "./fastq"
+params.primers = ""
+params.fast5_dir = ""
+params.fastq_dir = ""
 params.run_prefix = "artic_ncov19"
 params.outdir = "artic_ncov19_results"
 params.basecalling = "FALSE"
@@ -24,6 +24,10 @@ if(params.basecalling){
       .fromPath( "${params.fast5_dir}/*sequencing_summary*")
       .ifEmpty { exit 1, "Cannot find sequencing summary in: ${params.fast5_dir} Path must not end with /" }
       .set { sequencing_summary }
+  Channel
+      .value( "${params.primers}")
+      .ifEmpty { exit 1, "Primers used must be included." }
+      .into { nanopolish_primers; medaka_primers}
 
   process guppy_basecalling {
     input:
@@ -61,6 +65,11 @@ else {
       .fromPath( "${params.fast5_dir}/*sequencing_summary*")
       .ifEmpty { exit 1, "Cannot find sequencing summary in: ${params.fast5_dir} Path must not end with /" }
       .set { sequencing_summary }
+
+  Channel
+      .value( "${params.primers}")
+      .ifEmpty { exit 1, "Primers used must be included." }
+      .into { nanopolish_primers; medaka_primers}
 }
 
 process guppy_demultiplexing {
@@ -80,6 +89,8 @@ process guppy_demultiplexing {
 
 process artic_guppyplex {
   publishDir "${params.outdir}/guppyplex", mode: 'copy'
+  stageOutMode = 'link'
+
   input:
     file(reads) from demultiplexed_reads.flatten()
 
@@ -98,8 +109,10 @@ process artic_guppyplex {
 
 process arctic_minion_pipeline {
   publishDir "${params.outdir}/pipeline_nanopolish", mode: 'copy'
+  stageInMode = 'link'
 
   input:
+    val primers from nanopolish_primers
     file(name) from fastq_minion_pipeline
     file(fast5s) from nanopolish_fast5.collect()
     file(sequencing_summary) from sequencing_summary
@@ -114,6 +127,6 @@ process arctic_minion_pipeline {
     filename=${name}
     samplename=\${filename%.*}
 
-    artic minion --normalise 200 --threads 8 --scheme-directory /artic-ncov2019/primer_schemes --fast5-directory ./fast5s --sequencing-summary ${sequencing_summary} --read-file ${name} nCoV-2019/V1 \$samplename
+    artic minion --normalise ${params.normalise} --threads ${params.threadspipejob} --scheme-directory /artic-ncov2019/primer_schemes --fast5-directory ./fast5s --sequencing-summary ${sequencing_summary} --read-file ${name} nCoV-2019/${primers} \$samplename
     """
 }
