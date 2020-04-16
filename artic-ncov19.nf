@@ -51,7 +51,7 @@ else {
       .set { fastq_reads }
 
   Channel
-      .fromPath( "${params.fast5_dir}/**.fast5")
+      .fromPath( "${params.fast5_dir}")
       .ifEmpty { exit 1, "Cannot find any fast5 files in: ${params.fast5_dir} Path must not end with /" }
       .set { polish_fast5 }
 }
@@ -91,45 +91,41 @@ process artic_guppyplex {
 }
 
 if(params.polishing=="nanopolish"){
-  process arctic_nanopolish_pipeline {
+  process artic_nanopolish_pipeline {
     publishDir "${params.outdir}/pipeline_nanopolish", mode: 'copy'
 
     input:
       val primers from polish_primers
-      tuple file(name), file(fast5s), file(sequencing_summary) from polish_files .combine(polish_fast5.collect()) .combine(sequencing_summary)
+      tuple file(fastq), path(fast5path), file(sequencing_summary) from polish_files .combine(polish_fast5) .combine(sequencing_summary)
 
     output:
       file "*{.primertrimmed.bam,.vcf,.variants.tab,.consensus.fasta}" into nanopolish_output
 
     script:
       """
-      mkdir fast5s
-      mv *.fast5 fast5s/
-
-      filename=${name}
+      #get samplename by dropping extension from
+      filename=${fastq}
       samplename=\${filename%.*}
 
-      artic minion --normalise ${params.normalise} --threads ${params.threadspipejob} --scheme-directory /artic-ncov2019/primer_schemes --fast5-directory ./fast5s --sequencing-summary ${sequencing_summary} --read-file ${name} nCoV-2019/${primers} \$samplename
+      artic minion --normalise ${params.normalise} --threads ${params.threadspipejob} --scheme-directory /artic-ncov2019/primer_schemes --fast5-directory ${fast5path}  --sequencing-summary ${sequencing_summary} --read-file ${fastq} nCoV-2019/${primers} \$samplename
       """
   }
 }
 
 else {
-  process arctic_medaka_pipeline {
+  process artic_medaka_pipeline {
     publishDir "${params.outdir}/pipeline_nanopolish", mode: 'copy'
 
     input:
       val primers from polish_primers
-      tuple file(name), file(fast5s), file(sequencing_summary) from polish_files
+      tuple file(name), path(fast5s,stageAs:'fast5s/*'), file(sequencing_summary) from polish_files
 
     output:
       file "*{.primertrimmed.bam,.vcf,.variants.tab,.consensus.fasta}" into medaka_output
 
     script:
       """
-      mkdir fast5s
-      mv *.fast5 fast5s/
-
+      #
       filename=${name}
       samplename=\${filename%.*}
 
