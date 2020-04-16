@@ -12,12 +12,12 @@ Channel
     .into { polish_primers }
 
 Channel
-    .fromPath( "${params.fast5_dir}/*sequencing_summary*")
-    .ifEmpty { exit 1, "Cannot find sequencing summary in: ${params.fast5_dir} Path must not end with /" }
+    .fromPath( "${params.sequencing_summary}")
+    .ifEmpty { exit 1, "Cannot find sequencing summary in: ${params.sequencing_summary}" }
     .set { sequencing_summary }
 
 // If we have fast5 files then start with basecalling
-if(params.basecalling){
+if(params.basecalling=="TRUE"){
   Channel
       .fromPath( "${params.fast5_dir}/**.fast5")
       .ifEmpty { exit 1, "Cannot find any fast5 files in: ${params.fast5_dir} Path must not end with /" }
@@ -78,7 +78,7 @@ process artic_guppyplex {
     file(reads) from demultiplexed_reads.flatten()
 
   output:
-    file "${params.run_prefix}_barcode*.fastq" into fastq_minion_pipeline
+    file "${params.run_prefix}_barcode*.fastq" into polish_files
 
   script:
     """
@@ -90,19 +90,13 @@ process artic_guppyplex {
     """
 }
 
-Channel
-    .from(fastq_minion_pipeline)
-    .combine(polish_fast5.collect())
-    .combine(sequencing_summary)
-    .set { polish_files }
-
 if(params.polishing=="nanopolish"){
   process arctic_nanopolish_pipeline {
     publishDir "${params.outdir}/pipeline_nanopolish", mode: 'copy'
 
     input:
-      val primers from nanopolish_primers
-      tuple file(name), file(fast5s), file(sequencing_summary) from polish_files
+      val primers from polish_primers
+      tuple file(name), file(fast5s), file(sequencing_summary) from polish_files .combine(polish_fast5.collect()) .combine(sequencing_summary)
 
     output:
       file "*{.primertrimmed.bam,.vcf,.variants.tab,.consensus.fasta}" into nanopolish_output
@@ -125,7 +119,7 @@ else {
     publishDir "${params.outdir}/pipeline_nanopolish", mode: 'copy'
 
     input:
-      val primers from nanopolish_primers
+      val primers from polish_primers
       tuple file(name), file(fast5s), file(sequencing_summary) from polish_files
 
     output:
