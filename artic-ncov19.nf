@@ -19,7 +19,7 @@ Channel
 // If we have fast5 files then start with basecalling
 if(params.basecalling=="TRUE"){
   Channel
-      .fromPath( "${params.fast5_dir}/**.fast5")
+      .fromPath( "${params.fast5_dir}")
       .ifEmpty { exit 1, "Cannot find any fast5 files in: ${params.fast5_dir} Path must not end with /" }
       .into { raw_fast5; polish_fast5 }
 
