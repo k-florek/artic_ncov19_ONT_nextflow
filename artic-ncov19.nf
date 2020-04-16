@@ -107,6 +107,13 @@ process artic_guppyplex {
     """
 }
 
+
+Channel
+    .from(fastq_minion_pipeline)
+    .combine(nanopolish_fast5.collect())
+    .combine(sequencing_summary)
+    .into { nanopolish_files}
+
 process arctic_minion_pipeline {
   publishDir "${params.outdir}/pipeline_nanopolish", mode: 'copy'
   stageInMode = 'link'
