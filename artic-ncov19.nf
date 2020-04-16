@@ -114,22 +114,20 @@ if(params.polishing=="nanopolish"){
 
 else {
   process artic_medaka_pipeline {
-    publishDir "${params.outdir}/pipeline_nanopolish", mode: 'copy'
+    publishDir "${params.outdir}/pipeline_medaka", mode: 'copy'
 
     input:
       val primers from polish_primers
-      tuple file(name), path(fast5s,stageAs:'fast5s/*'), file(sequencing_summary) from polish_files
+      tuple file(fastq), path(fast5path), file(sequencing_summary) from polish_files
 
     output:
-      file "*{.primertrimmed.bam,.vcf,.variants.tab,.consensus.fasta}" into medaka_output
+      file "" into medaka_output
 
     script:
       """
       #
       filename=${name}
       samplename=\${filename%.*}
-
-      artic minion --normalise ${params.normalise} --threads ${params.threadspipejob} --scheme-directory /artic-ncov2019/primer_schemes --fast5-directory ./fast5s --sequencing-summary ${sequencing_summary} --read-file ${name} nCoV-2019/${primers} \$samplename
       """
   }
 }
