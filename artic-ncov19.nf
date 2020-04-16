@@ -9,7 +9,7 @@
 Channel
     .value( "${params.primers}")
     .ifEmpty { exit 1, "Primers used must be included." }
-    .into { polish_primers }
+    .set { polish_primers }
 
 Channel
     .fromPath( "${params.sequencing_summary}")
