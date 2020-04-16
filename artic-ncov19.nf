@@ -113,9 +113,7 @@ process arctic_minion_pipeline {
 
   input:
     val primers from nanopolish_primers
-    file(name) from fastq_minion_pipeline
-    file(fast5s) from nanopolish_fast5.collect()
-    file(sequencing_summary) from sequencing_summary
+    tuple file(name), file(fast5s), file(sequencing_summary) from nanopolish_files
 
   output:
     file "*{.primertrimmed.bam,.vcf,.variants.tab,.consensus.fasta}" into output 
