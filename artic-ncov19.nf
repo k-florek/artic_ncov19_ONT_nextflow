@@ -43,7 +43,7 @@ if(params.basecalling=="TRUE"){
   }
 }
 
-// If we have already basecalled get fastq and fast5 for polishing
+// If we have already basecalled get fastqs and fast5s for polishing
 else {
   Channel
       .fromPath( "${params.fastq_dir}/*.fastq*")
@@ -56,6 +56,7 @@ else {
       .set { polish_fast5 }
 }
 
+// Demultiplex fastqs
 process guppy_demultiplexing {
   publishDir "${params.outdir}/demultiplexing", mode: 'copy'
 
@@ -71,6 +72,7 @@ process guppy_demultiplexing {
     """
 }
 
+// Run artic gupplyplex
 process artic_guppyplex {
   publishDir "${params.outdir}/guppyplex", mode: 'copy'
 
@@ -90,6 +92,7 @@ process artic_guppyplex {
     """
 }
 
+// Run artic pipeline using nanopolish
 if(params.polishing=="nanopolish"){
   process artic_nanopolish_pipeline {
     publishDir "${params.outdir}/pipeline_nanopolish", mode: 'copy'
@@ -99,11 +102,12 @@ if(params.polishing=="nanopolish"){
       tuple file(fastq), path(fast5path), file(sequencing_summary) from polish_files .combine(polish_fast5) .combine(sequencing_summary)
 
     output:
-      file "*{.primertrimmed.bam,.vcf,.variants.tab,.consensus.fasta}" into nanopolish_output
+      file "*{.primertrimmed.bam,.vcf,.variants.tab}"
+      file "*.consensus.fasta" into consensus_fasta
 
     script:
       """
-      #get samplename by dropping extension from
+      # get samplename by dropping file extension
       filename=${fastq}
       samplename=\${filename%.*}
 
@@ -112,22 +116,79 @@ if(params.polishing=="nanopolish"){
   }
 }
 
+// Run artic pipeline using medaka
 else {
   process artic_medaka_pipeline {
     publishDir "${params.outdir}/pipeline_medaka", mode: 'copy'
 
     input:
       val primers from polish_primers
-      tuple file(fastq), path(fast5path), file(sequencing_summary) from polish_files
+      file(fastq) from polish_files
 
     output:
-      file "" into medaka_output
+      file "*{.primertrimmed.rg,.primers.vcf,.vcf.gz,.trimmed.rg,.fail.vcf}*" 
+      file "*.consensus.fasta" into consensus_fasta
 
     script:
       """
-      #
-      filename=${name}
+      # get samplename by dropping file extension
+      filename=${fastq}
       samplename=\${filename%.*}
+      artic minion --medaka --normalise ${params.normalise} --threads ${params.threadspipejob} --scheme-directory /artic-ncov2019/primer_schemes --read-file ${fastq} nCoV-2019/${primers} \$samplename
       """
   }
+}
+
+// Generate msa from consensus sequences using MAFFT
+process msa{
+  publishDir "${params.outdir}/msa",mode:'copy',overwrite: false
+
+  input:
+  file(assemblies) from consensus_fasta.collect()
+
+  output:
+  file "msa.fasta" into msa_snp, msa_tree
+
+  shell:
+  """
+  cat *.fasta > assemblies.fasta
+  mafft assemblies.fasta > msa.fasta
+  """
+}
+
+// Generate SNP distance matrix from MAFFT alignment
+process snp_matrix{
+  publishDir "${params.outdir}/snp-dist",mode:'copy'
+
+  input:
+  file(alignment) from msa_snp
+
+  output:
+  file "pairwise_snp_distance_matrix.tsv" into matrix
+
+  shell:
+  """
+  snp-dists ${alignment} > pairwise_snp_distance_matrix.tsv
+  """
+}
+
+// Infer ML tree using GTR+G4 model from MAFFT alignment and bootstrap 1000X
+process iqtree {
+  publishDir "${params.outdir}/msa",mode:'copy', overwrite: false
+
+  input:
+  file("msa.fasta") from msa_tree
+
+  output:
+  file("msa.tree") into ML_tree
+
+  script:
+    """
+    numGenomes=`grep -o '>' msa.fasta | wc -l`
+    if [ \$numGenomes -gt 3 ]
+    then
+      iqtree -nt AUTO -s msa.fasta -m 'GTR+G4' -bb 1000
+      mv msa.fasta.contree msa.tree
+    fi
+    """
 }
