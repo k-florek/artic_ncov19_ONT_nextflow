@@ -17,7 +17,7 @@ Channel
     .set { sequencing_summary }
 
 // If we have fast5 files then start with basecalling
-if(params.basecalling=="TRUE"){
+if(params.basecalling){
   Channel
       .fromPath( "${params.fast5_dir}")
       .ifEmpty { exit 1, "Cannot find any fast5 files in: ${params.fast5_dir} Path must not end with /" }
@@ -126,7 +126,7 @@ else {
       file(fastq) from polish_files
 
     output:
-      file "*{.primertrimmed.rg,.primers.vcf,.vcf.gz,.trimmed.rg,.fail.vcf}*" 
+      file "*{.primertrimmed.rg,.primers.vcf,.vcf.gz,.trimmed.rg,.fail.vcf}*"
       file "*.consensus.fasta" into consensus_fasta
 
     script:
